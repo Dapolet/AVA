@@ -76,4 +76,4 @@ Built-in examples:
 - If tools fail, disable tools or switch models in Settings.
 
 ## License 📄
-MIT License. See `LICENSE`.
+GNU General Public License v3.0. See `LICENSE`.
