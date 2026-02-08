@@ -161,8 +161,14 @@ def main():
     st.session_state["price_per_1k"] = price_per_1k
 
     def _save_all_settings():
+        selected_model = (
+            st.session_state.get("selected_model_widget")
+            or st.session_state.get("selected_model")
+            or default_model
+        )
+        st.session_state["selected_model"] = selected_model
         save_settings(base_dir, {
-            "selected_model": st.session_state.get("selected_model"),
+            "selected_model": selected_model,
             "temperature": st.session_state.get("temperature"),
             "max_tokens": st.session_state.get("max_tokens"),
             "use_streaming": st.session_state.get("use_streaming"),
@@ -172,7 +178,8 @@ def main():
         })
         st.success("Settings saved.")
 
-    st.button("Save Settings", on_click=_save_all_settings)
+    if st.button("Save Settings"):
+        _save_all_settings()
 
     st.subheader("Quick Commands")
     command_templates = {

@@ -6,3 +6,7 @@
 
 # Local data
 data/monitoring.db
+
+# Python cache
+__pycache__/
+*.py[cod]
