@@ -36,6 +36,13 @@ def list_manifests(plugins_dir: str) -> List[Dict]:
     return manifests
 
 
+def _allowed_plugin_ids() -> Optional[set]:
+    raw = os.getenv("AVA_ALLOWED_PLUGINS", "").strip()
+    if not raw:
+        return None
+    return {item.strip() for item in raw.split(",") if item.strip()}
+
+
 def _import_entrypoint(plugin_dir: str, entrypoint: str) -> Tuple[Optional[object], Optional[str]]:
     if ":" not in entrypoint:
         return None, "Invalid entrypoint format"
@@ -60,17 +67,22 @@ def _import_entrypoint(plugin_dir: str, entrypoint: str) -> Tuple[Optional[objec
 
 def load_plugins(plugins_dir: str, registry: PluginRegistry, db_path: str) -> None:
     manifests = discover_manifests(plugins_dir)
+    allowed_ids = _allowed_plugin_ids()
     for manifest_path in manifests:
         plugin_dir = os.path.dirname(manifest_path)
         try:
             manifest = _load_manifest(manifest_path)
+            plugin_id = manifest.get("id", "unknown")
+            if allowed_ids is not None and plugin_id not in allowed_ids:
+                log_plugin_run(db_path, plugin_id, "load", "skipped", "not in allowlist")
+                continue
             if not manifest.get("enabled", True):
-                log_plugin_run(db_path, manifest.get("id", "unknown"), "load", "skipped", "")
+                log_plugin_run(db_path, plugin_id, "load", "skipped", "")
                 continue
 
             plugin_instance, error = _import_entrypoint(plugin_dir, manifest.get("entrypoint", ""))
             if error:
-                log_plugin_run(db_path, manifest.get("id", "unknown"), "load", "error", error)
+                log_plugin_run(db_path, plugin_id, "load", "error", error)
                 continue
 
             registry.register(
@@ -78,7 +90,7 @@ def load_plugins(plugins_dir: str, registry: PluginRegistry, db_path: str) -> No
                 enabled=True,
                 description=manifest.get("description", "")
             )
-            log_plugin_run(db_path, manifest.get("id", "unknown"), "load", "ok", "")
+            log_plugin_run(db_path, plugin_id, "load", "ok", "")
         except Exception as exc:
             log_plugin_run(db_path, "unknown", "load", "error", str(exc))
 

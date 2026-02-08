@@ -31,7 +31,7 @@ def main():
     client: OpenRouterClient = st.session_state["client"]
     chat_manager: ChatManager = st.session_state["chat_manager"]
 
-    default_model = "arcee-ai/trinity-mini:free"
+    default_model = "trinity-large-preview:free"
     settings = load_settings(base_dir)
     st.session_state.setdefault("selected_model", settings.get("selected_model") or default_model)
     st.session_state.setdefault("temperature", settings.get("temperature", 0.7))

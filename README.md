@@ -37,6 +37,11 @@ ADMIN_PASSWORD = "your_admin_password"
 Optional environment variables:
 - `MONITORING_DB_PATH` (default: `data/monitoring.db`)
 - `PLUGINS_DIR` (default: `plugins`)
+- `AVA_ALLOWED_PLUGINS` (comma-separated allowlist of plugin IDs)
+- `AVA_MAX_UPLOAD_TOTAL_BYTES` (default: `2000000`)
+- `AVA_MAX_UPLOAD_IMAGE_BYTES` (default: `1000000`)
+- `AVA_MAX_UPLOAD_TEXT_BYTES` (default: `200000`)
+- `AVA_MAX_UPLOAD_FILES` (default: `6`)
 
 ## Run ▶️
 ```bash

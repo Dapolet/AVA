@@ -1,3 +1,4 @@
+import logging
 import re
 import requests
 
@@ -99,6 +100,10 @@ class Plugin(BasePlugin):
         96: "⛈️🧊",
         99: "⛈️🧊",
     }
+    _GENERIC_ERROR = "Weather request failed. Please try again later."
+
+    def __init__(self):
+        self._logger = logging.getLogger(__name__)
 
     def _is_cyrillic(self, text: str) -> bool:
         return bool(re.search(r"[А-Яа-яЁё]", text))
@@ -334,5 +339,9 @@ class Plugin(BasePlugin):
                 "response_text": response_text,
             }
         except Exception as exc:
-            return {"status": "error", "message": str(exc)}
+            message = str(exc)
+            self._logger.error("Weather plugin error: %s", message)
+            if isinstance(exc, requests.RequestException):
+                return {"status": "error", "message": self._GENERIC_ERROR}
+            return {"status": "error", "message": message or self._GENERIC_ERROR}
 

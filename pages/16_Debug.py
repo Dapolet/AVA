@@ -21,7 +21,7 @@ def main():
     st.json({
         "selected_model": st.session_state.get("selected_model"),
         "selected_model_widget": st.session_state.get("selected_model_widget"),
-        "default_model": "arcee-ai/trinity-mini:free",
+        "default_model": "trinity-large-preview:free",
         "api_key_set": bool(config.api_key) if config else False,
         "settings_selected_model": settings.get("selected_model")
     })

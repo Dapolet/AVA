@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 from typing import Any, Dict
 
 
@@ -21,8 +22,15 @@ def load_settings(base_dir: str) -> Dict[str, Any]:
 
 def save_settings(base_dir: str, data: Dict[str, Any]) -> None:
     path = _settings_path(base_dir)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    dir_path = os.path.dirname(path)
+    os.makedirs(dir_path, exist_ok=True)
     current = load_settings(base_dir)
     current.update(data)
-    with open(path, "w", encoding="utf-8") as handle:
-        json.dump(current, handle, ensure_ascii=True, indent=2)
+    fd, tmp_path = tempfile.mkstemp(prefix="settings_", suffix=".tmp", dir=dir_path)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(current, handle, ensure_ascii=True, indent=2)
+        os.replace(tmp_path, path)
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)

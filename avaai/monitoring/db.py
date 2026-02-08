@@ -5,8 +5,9 @@ from typing import Optional, List, Dict
 
 
 def _connect(db_path: str) -> sqlite3.Connection:
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 
@@ -14,6 +15,8 @@ def init_db(db_path: str) -> None:
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     conn = _connect(db_path)
     try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
         cur = conn.cursor()
         cur.execute("""
             CREATE TABLE IF NOT EXISTS requests (

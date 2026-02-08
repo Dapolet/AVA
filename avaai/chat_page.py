@@ -53,7 +53,11 @@ def _render_message(message: dict) -> None:
             if included:
                 st.caption(f"Attachments included: {', '.join(a['name'] for a in included)}")
             if skipped:
-                st.caption(f"Attachments skipped: {', '.join(a['name'] for a in skipped)}")
+                skipped_list = [
+                    f"{a['name']} ({a.get('reason')})" if a.get("reason") else a["name"]
+                    for a in skipped
+                ]
+                st.caption(f"Attachments skipped: {', '.join(skipped_list)}")
 
 
 def chat_page() -> None:
@@ -65,7 +69,7 @@ def chat_page() -> None:
     chat_manager: ChatManager = st.session_state["chat_manager"]
     plugin_registry = st.session_state.get("plugin_registry")
 
-    default_model = "arcee-ai/trinity-mini:free"
+    default_model = "trinity-large-preview:free"
     settings = load_settings(base_dir)
     st.session_state.setdefault("selected_model", settings.get("selected_model") or default_model)
     st.session_state.setdefault("selected_model_widget", st.session_state["selected_model"])
@@ -567,7 +571,18 @@ def chat_page() -> None:
         },
     )
 
-    content_parts, attachments = build_content_parts(prompt, uploaded_files or [])
+    max_total_bytes = int(os.getenv("AVA_MAX_UPLOAD_TOTAL_BYTES", "2000000"))
+    max_image_bytes = int(os.getenv("AVA_MAX_UPLOAD_IMAGE_BYTES", "1000000"))
+    max_text_bytes = int(os.getenv("AVA_MAX_UPLOAD_TEXT_BYTES", "200000"))
+    max_files = int(os.getenv("AVA_MAX_UPLOAD_FILES", "6"))
+    content_parts, attachments = build_content_parts(
+        prompt,
+        uploaded_files or [],
+        max_text_bytes=max_text_bytes,
+        max_total_bytes=max_total_bytes,
+        max_image_bytes=max_image_bytes,
+        max_files=max_files,
+    )
     content = content_parts if attachments else prompt
     chat_manager.add_message("user", content, metadata={"attachments": attachments})
 
@@ -583,7 +598,11 @@ def chat_page() -> None:
             if included:
                 st.caption(f"Attachments included: {', '.join(a['name'] for a in included)}")
             if skipped:
-                st.caption(f"Attachments skipped: {', '.join(a['name'] for a in skipped)}")
+                skipped_list = [
+                    f"{a['name']} ({a.get('reason')})" if a.get("reason") else a["name"]
+                    for a in skipped
+                ]
+                st.caption(f"Attachments skipped: {', '.join(skipped_list)}")
 
     with st.chat_message("assistant"):
         message_placeholder = st.empty()

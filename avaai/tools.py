@@ -5,6 +5,13 @@ from typing import Any, Dict, List, Optional
 
 
 def _safe_eval(expression: str) -> Any:
+    if not isinstance(expression, str):
+        raise ValueError("Invalid expression")
+    expression = expression.strip()
+    if not expression:
+        raise ValueError("Empty expression")
+    if len(expression) > 100:
+        raise ValueError("Expression too long")
     allowed_nodes = (
         ast.Expression, ast.BinOp, ast.UnaryOp, ast.Num, ast.Load,
         ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Mod, ast.Pow, ast.USub,
@@ -14,6 +21,16 @@ def _safe_eval(expression: str) -> Any:
     for child in ast.walk(node):
         if not isinstance(child, allowed_nodes):
             raise ValueError("Unsupported expression")
+        if isinstance(child, ast.Constant) and isinstance(child.value, (int, float)):
+            if abs(child.value) > 1_000_000:
+                raise ValueError("Number too large")
+        if isinstance(child, ast.Pow):
+            exponent = child.right
+            if isinstance(exponent, ast.Constant) and isinstance(exponent.value, (int, float)):
+                if exponent.value > 8:
+                    raise ValueError("Exponent too large")
+            else:
+                raise ValueError("Exponent must be a constant")
     return eval(compile(node, "<calc>", "eval"), {"__builtins__": {}})
 
 
@@ -152,7 +169,10 @@ def run_tool(
         return {"time": datetime.now().isoformat()}
     if name == "calculate":
         expression = arguments.get("expression", "")
-        return {"result": _safe_eval(expression)}
+        try:
+            return {"result": _safe_eval(expression)}
+        except Exception as exc:
+            return {"status": "error", "message": str(exc)}
     if name == "get_weather":
         weather_plugin = _get_weather_plugin(plugin_registry)
         if not weather_plugin:
@@ -195,7 +215,10 @@ def tool_call_to_message(
         args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
     except json.JSONDecodeError:
         args = {}
-    result = run_tool(name, args, plugin_registry=plugin_registry)
+    try:
+        result = run_tool(name, args, plugin_registry=plugin_registry)
+    except Exception as exc:
+        result = {"status": "error", "message": str(exc)}
     return {
         "role": "tool",
         "tool_call_id": tool_call.get("id"),

@@ -108,32 +108,47 @@ def message_content_only(message: Dict[str, Any]) -> str:
 def build_content_parts(
     prompt: str,
     files: List[Any],
-    max_text_bytes: int = 200_000
+    max_text_bytes: int = 200_000,
+    max_total_bytes: int = 2_000_000,
+    max_image_bytes: int = 1_000_000,
+    max_files: int = 6,
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     parts: List[Dict[str, Any]] = [{"type": "text", "text": prompt}]
     attachments: List[Dict[str, Any]] = []
-    for uploaded in files or []:
+    total_bytes = 0
+    for idx, uploaded in enumerate(files or []):
         try:
             content_type = getattr(uploaded, "type", "")
             data = uploaded.getvalue()
             name = getattr(uploaded, "name", "file")
             size = len(data)
+            if max_files is not None and idx >= max_files:
+                attachments.append({"name": name, "type": content_type, "size": size, "included": False, "reason": "too_many_files"})
+                continue
+            if max_total_bytes is not None and (total_bytes + size) > max_total_bytes:
+                attachments.append({"name": name, "type": content_type, "size": size, "included": False, "reason": "total_size_limit"})
+                continue
             if content_type.startswith("image/"):
+                if max_image_bytes is not None and size > max_image_bytes:
+                    attachments.append({"name": name, "type": content_type, "size": size, "included": False, "reason": "image_size_limit"})
+                    continue
                 b64 = base64.b64encode(data).decode("ascii")
                 parts.append({
                     "type": "image_url",
                     "image_url": {"url": f"data:{content_type};base64,{b64}"}
                 })
                 attachments.append({"name": name, "type": content_type, "size": size, "included": True})
+                total_bytes += size
             elif content_type in ("text/plain", "text/markdown", "application/json", "text/csv") or name.endswith((".txt", ".md", ".json", ".csv")):
                 if size <= max_text_bytes:
                     text = data.decode("utf-8", errors="ignore")
                     parts.append({"type": "text", "text": f"\n\n[File: {name}]\n{text}"})
                     attachments.append({"name": name, "type": content_type, "size": size, "included": True})
+                    total_bytes += size
                 else:
-                    attachments.append({"name": name, "type": content_type, "size": size, "included": False})
+                    attachments.append({"name": name, "type": content_type, "size": size, "included": False, "reason": "text_size_limit"})
             else:
-                attachments.append({"name": name, "type": content_type, "size": size, "included": False})
+                attachments.append({"name": name, "type": content_type, "size": size, "included": False, "reason": "unsupported_type"})
         except Exception:
-            attachments.append({"name": "unknown", "type": "unknown", "size": 0, "included": False})
+            attachments.append({"name": "unknown", "type": "unknown", "size": 0, "included": False, "reason": "error"})
     return parts, attachments

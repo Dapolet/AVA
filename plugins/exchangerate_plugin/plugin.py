@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 
@@ -19,6 +20,10 @@ class Plugin(BasePlugin):
     _BASE_URL = "https://v6.exchangerate-api.com/v6"
     _CODE_RE = re.compile(r"^[A-Z]{3}$")
     _MAJOR = ["USD", "EUR", "GBP", "JPY", "CNY", "CHF", "CAD", "AUD", "RUB"]
+    _GENERIC_ERROR = "Exchange rate request failed. Please try again later."
+
+    def __init__(self):
+        self._logger = logging.getLogger(__name__)
 
     def _get_api_key(self) -> str:
         if st is not None:
@@ -66,6 +71,15 @@ class Plugin(BasePlugin):
             raise RuntimeError(self._api_error(data.get("error-type")))
         return data
 
+    def _safe_error(self, exc: Exception, api_key: str) -> str:
+        text = str(exc)
+        if api_key:
+            text = text.replace(api_key, "[redacted]")
+        self._logger.error("Exchange rate plugin error: %s", text)
+        if isinstance(exc, requests.RequestException):
+            return self._GENERIC_ERROR
+        return text or self._GENERIC_ERROR
+
     def _build_pair_url(self, api_key: str, base: str, target: str, amount: float | None) -> str:
         if amount is None:
             return f"{self._BASE_URL}/{api_key}/pair/{base}/{target}"
@@ -76,6 +90,7 @@ class Plugin(BasePlugin):
 
     def run(self, context) -> dict:
         context = context or {}
+        api_key = ""
         try:
             api_key = self._get_api_key()
             if not api_key:
@@ -165,5 +180,5 @@ class Plugin(BasePlugin):
                 "response_text": response_text,
             }
         except Exception as exc:
-            return {"status": "error", "message": str(exc)}
+            return {"status": "error", "message": self._safe_error(exc, api_key)}
 

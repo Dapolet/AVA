@@ -1,4 +1,5 @@
 import html
+import logging
 import os
 import re
 import time
@@ -21,6 +22,10 @@ class Plugin(BasePlugin):
     _BASE_BACKOFF_SEC = 0.5
     _MAX_BACKOFF_SEC = 4.0
     _last_request_ts = 0.0
+    _GENERIC_ERROR = "Wikimedia request failed. Please try again later."
+
+    def __init__(self):
+        self._logger = logging.getLogger(__name__)
 
     def _detect_language(self, text: str, language: str | None = None) -> str:
         if language in ("en", "ru"):
@@ -130,7 +135,11 @@ class Plugin(BasePlugin):
                     "status": "error",
                     "message": "Wikimedia rate limit reached. Please wait a few seconds and try again.",
                 }
-            return {"status": "error", "message": str(exc)}
+            self._logger.error("Wikimedia plugin error: %s", str(exc))
+            return {"status": "error", "message": self._GENERIC_ERROR}
         except Exception as exc:
-            return {"status": "error", "message": str(exc)}
+            self._logger.error("Wikimedia plugin error: %s", str(exc))
+            if isinstance(exc, requests.RequestException):
+                return {"status": "error", "message": self._GENERIC_ERROR}
+            return {"status": "error", "message": str(exc) or self._GENERIC_ERROR}
 
