@@ -1,0 +1,8 @@
+{
+  "id": "example_plugin",
+  "name": "Example Plugin",
+  "version": "0.1.0",
+  "entrypoint": "plugin:Plugin",
+  "enabled": false,
+  "description": "Example plugin for demonstration."
+}

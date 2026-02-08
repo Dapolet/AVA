@@ -1,0 +1,9 @@
+{
+  "selected_model": "arcee-ai/trinity-mini:free",
+  "temperature": 1.1,
+  "max_tokens": 2000,
+  "use_streaming": true,
+  "enable_tools": true,
+  "price_per_1k": 0.0,
+  "use_async": true
+}

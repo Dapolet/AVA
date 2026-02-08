@@ -1,0 +1,8 @@
+# Secrets
+.streamlit/secrets.toml
+
+# Local env
+.venv/
+
+# Local data
+data/monitoring.db
